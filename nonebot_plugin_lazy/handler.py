@@ -1,8 +1,9 @@
 """用户交互命令处理器。
 
-包含两大功能：
-1. `/register` — 私聊四步骤注册 / 群聊拒绝引导
-2. `/task` — 任务管理（list / enable / disable / interval / reset）
+包含三大功能：
+1. `/help` — 显示可用命令列表
+2. `/register` — 私聊四步骤注册 / 群聊拒绝引导
+3. `/task` — 任务管理（list / enable / disable / interval / reset）
 
 所有命令使用 Nonebot2 标准 Matcher.got() 实现多步骤对话。"""
 
@@ -108,6 +109,23 @@ async def _(bot: Bot, event: GroupMessageEvent):
             MessageSegment.at(event.user_id)
             + " 请在私聊中使用 /register 进行注册"
         ),
+    )
+
+
+# ── 帮助 ───────────────────────────────────────────
+
+help_cmd = on_command("help", rule=to_me())
+
+@help_cmd.handle()
+async def _():
+    await help_cmd.finish(
+        "📋 可用命令：\n\n"
+        "/register — 绑定学号密码（仅私聊）\n"
+        "/task list — 查看监控任务列表\n"
+        "/task enable <id> — 启用任务\n"
+        "/task disable <id> — 停用任务\n"
+        "/task interval <id> <秒> — 修改轮询间隔\n"
+        "/task reset <id> — 恢复默认设置"
     )
 
 

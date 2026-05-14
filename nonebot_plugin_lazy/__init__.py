@@ -45,6 +45,21 @@ async def startup():
         except Exception as e:
             logger.error(f".env 账号注册失败: {e}")
 
+    for user in list(user_mgr.all_users()):
+        if user.qq_id <= 0:
+            continue
+        tm = TokenManager(user.server_url, user.studentid, user.password)
+        tm.token = user.token
+        try:
+            await tm.ensure_token()
+            user.token = tm.token
+            user_mgr.flush()
+            logger.success(f"用户 {user.studentid} 凭证恢复成功")
+        except Exception as e:
+            logger.warning(
+                f"用户 {user.studentid} 凭证恢复失败，将在轮询中重试: {e}"
+            )
+
     scheduler.add_job(
         poller.run,
         "interval",

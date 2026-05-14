@@ -209,6 +209,9 @@ tempCodeRunnerFile.py
 # PyPI configuration file
 .pypirc
 
+# Plugin runtime data (user sessions, etc.)
+data/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
