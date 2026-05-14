@@ -13,6 +13,7 @@ dependencies = [
     "nonebot2>=2.4.0",
     "nonebot-adapter-onebot>=2.4.0",
     "nonebot-plugin-apscheduler",
+    "nonebot_plugin_htmlrender",
     "httpx>=0.28.0",
 ]
 
