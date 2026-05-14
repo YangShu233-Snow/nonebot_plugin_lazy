@@ -1,7 +1,7 @@
 """通知格式化与消息发送。
 
 支持两种通道：
-- 群通知：@ 特定用户（数据触发者或 owner_qq）
+- 群通知：根据 RuntimeConfig 路由表决定发送目标
 - 私聊通知：直接发送给数据触发者
 
 发送异常不会阻塞后续通知。"""
@@ -11,6 +11,7 @@ from nonebot.adapters.onebot.v11 import MessageSegment, Message
 from nonebot.log import logger
 
 from .config import config
+from .state import runtime_config
 
 
 class Notifier:
@@ -45,6 +46,10 @@ class Notifier:
             return config.owner_qq
         return -1
 
+    def _target_groups(self, qq_id: int) -> list[int]:
+        """根据运行时路由表决定当前用户的通知目标群。"""
+        return runtime_config.target_groups(qq_id)
+
     async def notify_rollcalls(self, items: list[dict], qq_id: int):
         """批量发送点名通知。"""
         try:
@@ -54,10 +59,11 @@ class Notifier:
             return
 
         at_qq = self._resolve_at_qq(qq_id)
+        groups = self._target_groups(qq_id)
 
         for item in items:
             msg = self._format_rollcall(item)
-            for group in config.notify_groups:
+            for group in groups:
                 try:
                     if at_qq > 0:
                         full_msg = Message(
@@ -88,10 +94,11 @@ class Notifier:
             return
 
         at_qq = self._resolve_at_qq(qq_id)
+        groups = self._target_groups(qq_id)
 
         for item in items:
             msg = self._format_todo(item)
-            for group in config.notify_groups:
+            for group in groups:
                 try:
                     if at_qq > 0:
                         full_msg = Message(

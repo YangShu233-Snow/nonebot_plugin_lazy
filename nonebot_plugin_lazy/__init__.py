@@ -12,7 +12,7 @@ require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
 
 from .config import config
-from .state import user_mgr
+from .state import user_mgr, runtime_config, save_config
 from .auth import TokenManager
 from .monitor import Poller
 
@@ -59,6 +59,13 @@ async def startup():
             logger.warning(
                 f"用户 {user.studentid} 凭证恢复失败，将在轮询中重试: {e}"
             )
+
+    if not runtime_config.allowed_groups and config.notify_groups:
+        runtime_config.allowed_groups = list(config.notify_groups)
+        save_config(runtime_config)
+        logger.info(
+            f"已将 .env notify_groups 导入运行时配置: {config.notify_groups}"
+        )
 
     scheduler.add_job(
         poller.run,
