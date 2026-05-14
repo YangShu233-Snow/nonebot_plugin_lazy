@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nonebot-plugin-lazy"
+version = "0.1.0"
+description = "LAZY SERVER 官方支持，在 QQ 内获得学在浙大点名/待办通知"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "AGPL-3.0-only" }
+dependencies = [
+    "nonebot2>=2.4.0",
+    "nonebot-adapter-onebot>=2.4.0",
+    "nonebot-plugin-apscheduler",
+    "httpx>=0.28.0",
+]
+
+[project.urls]
+homepage = "https://github.com/yangshu233/nonebot_plugin_lazy"
+repository = "https://github.com/yangshu233/nonebot_plugin_lazy"
+
+[tool.nonebot]
+plugins = ["nonebot_plugin_lazy"]
