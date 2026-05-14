@@ -116,13 +116,12 @@ class Poller:
         if not items:
             return
 
-        new_items = [
-            item for item in items
-            if item.get("rollcall_id")
-            not in user.state.seen_rollcall_ids
-        ]
-        if new_items:
-            await notifier.notify_rollcalls(new_items, user.qq_id)
+        has_new = any(
+            item.get("rollcall_id") not in user.state.seen_rollcall_ids
+            for item in items
+        )
+        if has_new:
+            await notifier.notify_rollcalls(user.qq_id, items)
 
         user.state.seen_rollcall_ids.update(
             item["rollcall_id"]
@@ -143,12 +142,12 @@ class Poller:
         if not items:
             return
 
-        new_items = [
-            item for item in items
-            if item.get("id") not in user.state.seen_todo_ids
-        ]
-        if new_items:
-            await notifier.notify_todos(new_items, user.qq_id)
+        has_new = any(
+            item.get("id") not in user.state.seen_todo_ids
+            for item in items
+        )
+        if has_new:
+            await notifier.notify_todos(user.qq_id, items)
 
         user.state.seen_todo_ids.update(
             item["id"] for item in items if "id" in item

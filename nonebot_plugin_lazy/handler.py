@@ -21,6 +21,7 @@ from nonebot.adapters.onebot.v11 import (
     Message,
 )
 from nonebot.params import ArgPlainText, CommandArg
+from nonebot.exception import FinishedException
 from nonebot.log import logger
 
 from .config import config
@@ -139,7 +140,15 @@ async def _(bot: Bot, event: GroupMessageEvent):
     await bot.send(
         event=event,
         message=MessageSegment.at(uid)
-        + " 已收到注册申请，请查看私聊消息完成注册。",
+        + " 已收到注册申请，正在发送私聊...",
+    )
+    await bot.send_private_msg(
+        user_id=uid,
+        message=(
+            "您在白名单群中发起了注册，请在私聊中发送"
+            " /register 完成注册。\n"
+            "注册成功后，点名和待办通知将自动推送到该群。"
+        ),
     )
 
 
@@ -256,6 +265,8 @@ async def _task_update(user, task_id: str, body: dict):
                 return
             resp.raise_for_status()
             await task.finish(f"✅ 任务 {task_id} 已更新。")
+        except FinishedException:
+            raise
         except Exception as e:
             logger.error(f"更新任务失败: {e}")
             await task.finish(f"更新任务失败：{e}")
@@ -278,6 +289,8 @@ async def _task_reset(user, task_id: str):
             resp.raise_for_status()
             msg = resp.json().get("message", "已重置")
             await task.finish(f"✅ 任务 {task_id} {msg}。")
+        except FinishedException:
+            raise
         except Exception as e:
             logger.error(f"重置任务失败: {e}")
             await task.finish(f"重置任务失败：{e}")
