@@ -16,12 +16,6 @@ from nonebot.log import logger
 from .config import config
 from .state import runtime_config
 
-try:
-    # from nonebot_plugin_htmlrender import html_to_pic
-    pass
-except ImportError:
-    html_to_pic = None
-
 
 _ROLLCALL_HTML = """<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">{style}</head><body>{body}</body></html>"""
 
@@ -112,16 +106,6 @@ class Notifier:
         )
         return _ROLLCALL_HTML.format(style=_STYLE, body=body)
 
-    async def _render_image(self, html: str) -> bytes | None:
-        if html_to_pic is None:
-            logger.error("html_to_pic 不可用（nonebot_plugin_htmlrender 未安装）")
-            return None
-        try:
-            return await html_to_pic(html, viewport={"width": 560})
-        except Exception as e:
-            logger.error(f"渲染图片失败: {e}")
-            return None
-
     def _resolve_at_qq(self, qq_id: int) -> int:
         if qq_id > 0:
             return qq_id
@@ -191,18 +175,13 @@ class Notifier:
             logger.error("没有可用的 Bot 实例")
             return
         groups = self._target_groups(qq_id)
-        html = self._build_todo_html(items)
-        pic = await self._render_image(html)
-        if pic:
-            await self._send_image(qq_id, pic, groups)
-        else:
-            text = "\n\n".join(
-                f"📋 待办\n标题：{i.get('title','')}\n"
-                f"截止：{self._format_time(i.get('end_time'))}"
-                f"{i['note'] if 'note' in i else '时间还很充裕……'}"
-                for i in items
-            )
-            await self._send_text_fallback(qq_id, text, groups)
+        text = "\n\n".join(
+            f"📋 待办\n标题：{i.get('title','')}\n"
+            f"截止：{self._format_time(i.get('end_time'))}"
+            f"{i['note'] if 'note' in i else '时间还很充裕……'}"
+            for i in items
+        )
+        await self._send_text_fallback(qq_id, text, groups)
 
     async def alert_superusers(self, msg: str):
         try:
