@@ -2,6 +2,10 @@
 
 LAZY Server 官方支持的 Nonebot2 插件，让你的 QQBot 可以查询学在浙大信息。
 
+> 本仓库目前 Vibe Coding 较高，在此致歉
+>
+> 大规模的重构正在进行中……
+
 ## 功能特性
 
 - **点名监控** — 定时拉取进行中的点名，新点名出现时即时通知
@@ -49,7 +53,7 @@ nonebot.load_plugins("src/plugins")
 LAZY_MONITOR__SERVER_URL=http://127.0.0.1:8765
 
 # 可选：静态配置学号密码（不配置则等待私聊注册）
-LAZY_MONITOR__STUDENTID=3240100106
+LAZY_MONITOR__STUDENTID=3xx010xxxx
 LAZY_MONITOR__PASSWORD=your_password
 LAZY_MONITOR__OWNER_QQ=123456789
 
@@ -75,22 +79,22 @@ LAZY_MONITOR__RETRY_DELAY=5
 
 ### 注册
 
-| 场景 | 命令 | 行为 |
-|------|------|------|
+| 场景 | 命令        | 行为                                          |
+| ---- | ----------- | --------------------------------------------- |
 | 私聊 | `/register` | 四步骤对话：安全提示→确认→学号→密码→验证→绑定 |
-| 群聊 | `/register` | @用户并引导到私聊 |
+| 群聊 | `/register` | @用户并引导到私聊                             |
 
 ### 任务管理
 
 所有命令均需使用私聊或在群聊中 @Bot 触发。
 
-| 命令 | 说明 |
-|------|------|
-| `/task list` | 列出所有监控任务及当前状态 |
-| `/task enable <task_id>` | 启用指定任务 |
-| `/task disable <task_id>` | 停用指定任务 |
-| `/task interval <task_id> <秒>` | 修改指定任务的轮询间隔 |
-| `/task reset <task_id>` | 恢复指定任务为系统默认配置 |
+| 命令                            | 说明                       |
+| ------------------------------- | -------------------------- |
+| `/task list`                    | 列出所有监控任务及当前状态 |
+| `/task enable <task_id>`        | 启用指定任务               |
+| `/task disable <task_id>`       | 停用指定任务               |
+| `/task interval <task_id> <秒>` | 修改指定任务的轮询间隔     |
+| `/task reset <task_id>`         | 恢复指定任务为系统默认配置 |
 
 示例：
 ```
