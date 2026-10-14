@@ -10,6 +10,8 @@ Poller 遍历 UserManager 中所有注册用户，每人独立：
 """
 
 import httpx
+from datetime import datetime, timezone
+from itertools import pairwise
 from nonebot.log import logger
 
 from .config import config
@@ -17,7 +19,8 @@ from .state import user_mgr, UserSession
 from .auth import TokenManager
 from .notifier import notifier
 
-
+# WTF is this? Stupid Code!!!
+# It should be restructed after the basic func adjust over.
 def _extract_items(data, key: str) -> list[dict]:
     """从 LAZY SERVER 响应中提取数据项列表。
 
@@ -37,6 +40,51 @@ def _extract_items(data, key: str) -> list[dict]:
             if isinstance(v, list):
                 return v
     return []
+
+def _check_approaching_todos(todos: list[dict], user: UserSession)->dict[int, int]:
+    notified_time_points = [24, 6, 1, 0]
+    todo_notification_ids: dict[int, int] = {}
+
+    for todo in todos:
+        ddl = todo.get('end_time')
+        title = todo.get('title')
+        todo_id = todo.get('id')
+
+        if not ddl:
+            continue
+
+        try:
+            remaining_time = datetime.fromisoformat(ddl) - datetime.now(timezone.utc)
+        except ValueError as e:
+            logger.warning(f"{title}[{todo_id}] end_time params get a invalid format!!! The Details: {ddl}")
+
+        # calculate the remain time in hour
+        # then get the lower point in time
+        remaining_hour = remaining_time.total_seconds() // 3600
+        _, lo_time_point = next(
+            ((hi, lo) for hi, lo in pairwise(notified_time_points) if hi >= remaining_hour >= lo),
+            (None, None)
+        )
+
+        if not lo_time_point:
+            continue
+
+        user.state.notified_todo_ddl_ids.update(
+            {
+                todo_id: lo_time_point
+            }
+        )
+
+        pre_lo_time_point = user.state.notified_todo_ddl_ids[todo_id]
+
+        if lo_time_point < pre_lo_time_point:
+            todo_notification_ids.update(
+                {
+                    todo_id: remaining_hour
+                }
+            )
+
+    return todo_notification_ids
 
 
 class Poller:
@@ -142,11 +190,16 @@ class Poller:
         if not items:
             return
 
+        notifications_ids = _check_approaching_todos(items, user)
+        for item in items:
+            if item.get('id') in notifications_ids:
+                item['note'] = f'⚠️ 距离任务截止还有不到 {notifications_ids[item.get('id')]+1}h！'
+
         has_new = any(
             item.get("id") not in user.state.seen_todo_ids
             for item in items
         )
-        if has_new:
+        if has_new or notifications_ids:
             await notifier.notify_todos(user.qq_id, items)
 
         user.state.seen_todo_ids.update(

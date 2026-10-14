@@ -25,7 +25,7 @@ class MonitorState:
 
     seen_rollcall_ids: set[int] = field(default_factory=set)
     seen_todo_ids: set[int] = field(default_factory=set)
-
+    notified_todo_ddl_ids: dict[int, int] = field(default_factory=dict)
 
 @dataclass
 class UserSession:

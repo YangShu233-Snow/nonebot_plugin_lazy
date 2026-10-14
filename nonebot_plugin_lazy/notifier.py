@@ -202,6 +202,7 @@ class Notifier:
             text = "\n\n".join(
                 f"📋 待办\n标题：{i.get('title','')}\n"
                 f"截止：{self._format_time(i.get('end_time'))}"
+                f"{i['note'] if 'note' in i else '时间还很充裕……'}"
                 for i in items
             )
             await self._send_text_fallback(qq_id, text, groups)
