@@ -176,17 +176,13 @@ class Notifier:
             logger.error("没有可用的 Bot 实例")
             return
         groups = self._target_groups(qq_id)
-        html = self._build_rollcall_html(items)
-        pic = await self._render_image(html)
-        if pic:
-            await self._send_image(qq_id, pic, groups)
-        else:
-            text = "\n\n".join(
-                f"🔔 点名\n课程：{i.get('course_title','')}\n"
-                f"发起人：{i.get('created_by_name','')}"
-                for i in items
-            )
-            await self._send_text_fallback(qq_id, text, groups)
+
+        text = "\n\n".join(
+            f"🔔 点名\n课程：{i.get('course_title','')}\n"
+            f"发起人：{i.get('created_by_name','')}"
+            for i in items
+        )
+        await self._send_text_fallback(qq_id, text, groups)
 
     async def notify_todos(self, qq_id: int, items: list[dict]):
         try:
