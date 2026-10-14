@@ -49,9 +49,9 @@ async def startup():
         if user.qq_id <= 0:
             continue
         tm = TokenManager(user.server_url, user.studentid, user.password)
-        tm.token = user.token
         try:
-            await tm.ensure_token()
+            # temporarily solve the token bug... Maybe?
+            await tm.login()
             user.token = tm.token
             user_mgr.flush()
             logger.success(f"用户 {user.studentid} 凭证恢复成功")

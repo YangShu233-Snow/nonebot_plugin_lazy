@@ -17,7 +17,8 @@ from .config import config
 from .state import runtime_config
 
 try:
-    from nonebot_plugin_htmlrender import html_to_pic
+    # from nonebot_plugin_htmlrender import html_to_pic
+    pass
 except ImportError:
     html_to_pic = None
 

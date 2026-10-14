@@ -2,7 +2,7 @@
 
 包含四大功能：
 1. `/help` — 显示可用命令列表
-2. `/register` — 群聊发起 → 私聊完成注册（自动绑定通知群）
+2. `/signup` — 群聊发起 → 私聊完成注册（自动绑定通知群）
 3. `/task` — 任务管理（list / enable / disable / interval / reset）
 4. `/lazy` — 管理员配置白名单群和用户路由（仅 SUPERUSERS）
 
@@ -35,19 +35,19 @@ _pending_group: dict[int, int] = {}
 
 # ── 注册 ──────────────────────────────────────────
 
-register = on_command(
-    "register",
+signup = on_command(
+    "signup",
     rule=to_me() & is_type(PrivateMessageEvent),
 )
 
-@register.handle()
+@signup.handle()
 async def _(event: PrivateMessageEvent):
     if user_mgr.get_user(event.user_id):
-        await register.finish(
+        await signup.finish(
             "您已经注册过了。如需重新注册，请联系管理员。"
         )
 
-@register.got(
+@signup.got(
     "confirm",
     prompt=(
         "⚠️ 安全提示：\n"
@@ -58,16 +58,16 @@ async def _(event: PrivateMessageEvent):
 )
 async def _(event: PrivateMessageEvent, confirm: str = ArgPlainText()):
     if confirm.strip() not in ("是", "y", "yes", "Y", "Yes"):
-        await register.finish(
-            "注册已取消。如需重新注册，请再次发送 /register。"
+        await signup.finish(
+            "注册已取消。如需重新注册，请再次发送 /signup。"
         )
 
-@register.got("studentid", prompt="请输入您的学号：")
+@signup.got("studentid", prompt="请输入您的学号：")
 async def _(studentid: str = ArgPlainText()):
     if not studentid.strip().isdigit():
-        await register.reject("学号格式不正确，请输入纯数字学号：")
+        await signup.reject("学号格式不正确，请输入纯数字学号：")
 
-@register.got(
+@signup.got(
     "password",
     prompt="请输入密码（密码仅用于验证，验证后加密存储）：",
 )
@@ -83,13 +83,13 @@ async def _(
     try:
         token = await tm.login()
     except RuntimeError as e:
-        await register.reject(
+        await signup.reject(
             f"验证失败：{e}\n请检查后重新输入密码"
             "（或发送 取消 中止）："
         )
     except Exception as e:
         logger.error(f"注册验证异常: {e}")
-        await register.reject("验证失败：服务器异常，请稍后重试。")
+        await signup.reject("验证失败：服务器异常，请稍后重试。")
         return
 
     user_mgr.add_user(
@@ -110,17 +110,17 @@ async def _(
         reply += "\n您尚未绑定通知群，请联系管理员配置。"
     reply += "\n您将会收到点名和待办的通知。"
 
-    await register.finish(reply)
+    await signup.finish(reply)
 
 
-register_group = on_command(
-    "register",
+signup_group = on_command(
+    "signup",
     rule=is_type(GroupMessageEvent),
 )
 
-@register_group.handle()
+@signup_group.handle()
 async def _(bot: Bot, event: GroupMessageEvent):
-    """群聊中发送 /register 时记录群号，引导到私聊接力注册。"""
+    """群聊中发送 /signup 时记录群号，引导到私聊接力注册。"""
     gid = event.group_id
     uid = event.user_id
     if gid not in runtime_config.allowed_groups:
@@ -146,7 +146,7 @@ async def _(bot: Bot, event: GroupMessageEvent):
         user_id=uid,
         message=(
             "您在白名单群中发起了注册，请在私聊中发送"
-            " /register 完成注册。\n"
+            " /signup 完成注册。\n"
             "注册成功后，点名和待办通知将自动推送到该群。"
         ),
     )
@@ -160,7 +160,7 @@ help_cmd = on_command("help", rule=to_me())
 async def _():
     await help_cmd.finish(
         "📋 可用命令：\n\n"
-        "/register — 绑定学号密码（仅私聊）\n"
+        "/signup — 绑定学号密码（仅私聊）\n"
         "/task list — 查看监控任务列表\n"
         "/task enable <id> — 启用任务\n"
         "/task disable <id> — 停用任务\n"
@@ -179,7 +179,7 @@ async def _(event: MessageEvent, args: Message = CommandArg()):
     user = user_mgr.get_user(event.user_id)
     if not user:
         await task.finish(
-            "您还没有注册。请在私聊中使用 /register 注册。"
+            "您还没有注册。请在私聊中使用 /signup 注册。"
         )
 
     text = args.extract_plain_text().strip().split()
@@ -298,7 +298,7 @@ async def _task_reset(user, task_id: str):
 
 # ── 管理员配置 ────────────────────────────────────
 
-lazy_cmd = on_command("lazy", rule=to_me(), permission=SUPERUSER)
+lazy_cmd = on_command("superlazy", rule=to_me(), permission=SUPERUSER)
 
 @lazy_cmd.handle()
 async def _(event: MessageEvent, args: Message = CommandArg()):
@@ -369,13 +369,13 @@ async def _(event: MessageEvent, args: Message = CommandArg()):
 async def _lazy_help():
     await lazy_cmd.finish(
         "📋 管理员命令（仅 SUPERUSERS）：\n\n"
-        "/lazy group add <群号>          加入白名单\n"
-        "/lazy group remove <群号>       移出白名单\n"
-        "/lazy group list               查看白名单与路由\n"
-        "/lazy user <QQ> bind <群号>     绑定用户通知路由\n"
-        "/lazy user <QQ> unbind <群号>   解绑用户通知路由\n"
-        "/lazy user <QQ> info           查看用户信息\n"
-        "/lazy status                   查看全局状态"
+        "/superlazy group add <群号>          加入白名单\n"
+        "/superlazy group remove <群号>       移出白名单\n"
+        "/superlazy group list               查看白名单与路由\n"
+        "/superlazy user <QQ> bind <群号>     绑定用户通知路由\n"
+        "/superlazy user <QQ> unbind <群号>   解绑用户通知路由\n"
+        "/superlazy user <QQ> info           查看用户信息\n"
+        "/superlazy status                   查看全局状态"
     )
 
 
