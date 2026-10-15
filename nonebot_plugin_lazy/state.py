@@ -129,7 +129,8 @@ class RuntimeConfig:
         user_groups = self.per_user_routes.get(qq_id)
         if user_groups:
             return [g for g in user_groups if g in allowed]
-        return list(allowed)
+        
+        return []
 
 
 def save_config(cfg: RuntimeConfig):

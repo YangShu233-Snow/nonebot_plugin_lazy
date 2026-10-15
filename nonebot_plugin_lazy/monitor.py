@@ -9,6 +9,8 @@ Poller 遍历 UserManager 中所有注册用户，每人独立：
 首次启动时所有 seen_ids 为空，自动跳过第一轮通知。
 """
 
+import math
+
 import httpx
 from datetime import datetime, timezone
 from itertools import pairwise
@@ -41,9 +43,10 @@ def _extract_items(data, key: str) -> list[dict]:
                 return v
     return []
 
-def _check_approaching_todos(todos: list[dict], user: UserSession)->dict[int, int]:
+def _check_approaching_todos(todos: list[dict], user: UserSession)->tuple[dict[int, float], bool]:
     notified_time_points = [24, 6, 1, 0]
     todo_notification_ids: dict[int, int] = {}
+    has_emergency = False
 
     for todo in todos:
         ddl = todo.get('end_time')
@@ -57,34 +60,36 @@ def _check_approaching_todos(todos: list[dict], user: UserSession)->dict[int, in
             remaining_time = datetime.fromisoformat(ddl) - datetime.now(timezone.utc)
         except ValueError as e:
             logger.warning(f"{title}[{todo_id}] end_time params get a invalid format!!! The Details: {ddl}")
+            continue
 
         # calculate the remain time in hour
         # then get the lower point in time
-        remaining_hour = remaining_time.total_seconds() // 3600
+        remaining_hour = remaining_time.total_seconds() / 3600
         _, lo_time_point = next(
             ((hi, lo) for hi, lo in pairwise(notified_time_points) if hi >= remaining_hour >= lo),
             (None, None)
         )
 
-        if not lo_time_point:
+        if lo_time_point is None:
             continue
 
+        pre_lo_time_point = user.state.notified_todo_ddl_ids.get(todo_id, 25)
         user.state.notified_todo_ddl_ids.update(
             {
                 todo_id: lo_time_point
             }
         )
 
-        pre_lo_time_point = user.state.notified_todo_ddl_ids[todo_id]
+        todo_notification_ids.update(
+            {
+                todo_id: remaining_hour
+            }
+        )
 
         if lo_time_point < pre_lo_time_point:
-            todo_notification_ids.update(
-                {
-                    todo_id: remaining_hour
-                }
-            )
+            has_emergency = True
 
-    return todo_notification_ids
+    return todo_notification_ids, has_emergency
 
 
 class Poller:
@@ -131,6 +136,7 @@ class Poller:
     async def _fetch_data(
         self, client: httpx.AsyncClient,
         tm: TokenManager, task_id: str,
+        user: UserSession
     ) -> dict | None:
         """拉取单任务数据，自动处理 401 重新认证。"""
         url = f"{config.server_url}/api/data/{task_id}"
@@ -141,6 +147,10 @@ class Poller:
             if resp.status_code == 401:
                 logger.warning("Token 失效 (401)，尝试重新登录")
                 await tm.handle_401()
+                user.token = tm.token
+                logger.info('Token刷新成功，保存中')
+                user_mgr.flush()
+                
                 resp = await client.get(
                     url, params={"token": tm.token}, timeout=10,
                 )
@@ -154,7 +164,7 @@ class Poller:
         self, client: httpx.AsyncClient,
         user: UserSession, tm: TokenManager,
     ):
-        body = await self._fetch_data(client, tm, "rollcall_watch")
+        body = await self._fetch_data(client, tm, "rollcall_watch", user)
         if body is None:
             return
         if body.get("status") != "ok" or body.get("data") is None:
@@ -180,7 +190,7 @@ class Poller:
         self, client: httpx.AsyncClient,
         user: UserSession, tm: TokenManager,
     ):
-        body = await self._fetch_data(client, tm, "todo_watch")
+        body = await self._fetch_data(client, tm, "todo_watch", user)
         if body is None:
             return
         if body.get("status") != "ok" or body.get("data") is None:
@@ -190,16 +200,16 @@ class Poller:
         if not items:
             return
 
-        notifications_ids = _check_approaching_todos(items, user)
+        notifications_ids, has_emergency = _check_approaching_todos(items, user)
         for item in items:
             if item.get('id') in notifications_ids:
-                item['note'] = f'⚠️ 距离任务截止还有不到 {notifications_ids[item.get('id')]+1}h！'
+                item['note'] = f'⚠️ 距离任务截止还有不到 {math.ceil(notifications_ids[item.get('id')])}h！'
 
         has_new = any(
             item.get("id") not in user.state.seen_todo_ids
             for item in items
         )
-        if has_new or notifications_ids:
+        if has_new or has_emergency:
             await notifier.notify_todos(user.qq_id, items)
 
         user.state.seen_todo_ids.update(

@@ -141,12 +141,15 @@ class Notifier:
     async def _send_text_fallback(self, qq_id: int, text: str, groups: list[int]):
         bot = get_bot()
         at_qq = self._resolve_at_qq(qq_id)
-        for gid in groups:
-            try:
-                msg = Message(MessageSegment.at(at_qq) + f"\n{text}") if at_qq > 0 else Message(text)
-                await bot.send_group_msg(group_id=gid, message=msg)
-            except Exception as e:
-                logger.error(f"发送群通知失败 ({gid}): {e}")
+
+        if groups:
+            for gid in groups:
+                try:
+                    msg = Message(MessageSegment.at(at_qq) + f"\n{text}") if at_qq > 0 else Message(text)
+                    await bot.send_group_msg(group_id=gid, message=msg)
+                except Exception as e:
+                    logger.error(f"发送群通知失败 ({gid}): {e}")
+        
         if qq_id > 0:
             try:
                 await bot.send_private_msg(user_id=qq_id, message=text)
@@ -177,8 +180,8 @@ class Notifier:
         groups = self._target_groups(qq_id)
         text = "\n\n".join(
             f"📋 待办\n标题：{i.get('title','')}\n"
-            f"截止：{self._format_time(i.get('end_time'))}"
-            f"{i['note'] if 'note' in i else '时间还很充裕……'}"
+            f"截止：{self._format_time(i.get('end_time'))}\n"
+            f"{i['note'] if i.get('note') else '时间还很充裕……'}"
             for i in items
         )
         await self._send_text_fallback(qq_id, text, groups)

@@ -214,11 +214,23 @@ async def _task_list(user):
     """发送 GET /api/tasks 并格式化输出。"""
     async with httpx.AsyncClient() as client:
         try:
+            url = f"{user.server_url}/api/tasks"
             resp = await client.get(
-                f"{config.server_url}/api/tasks",
-                params={"token": user.token},
-                timeout=10,
+                url, params={"token": user.token}, timeout=10,
             )
+
+            if resp.status_code == 401:
+                tm = TokenManager(
+                    user.server_url, user.studentid, user.password,
+                )
+                await tm.handle_401()
+                user.token = tm.token
+                user_mgr.flush()
+
+                resp = await client.get(
+                    url, params={"token": user.token}, timeout=10,
+                )
+
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
